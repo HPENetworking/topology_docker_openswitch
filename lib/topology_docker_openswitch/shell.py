@@ -26,20 +26,44 @@ from logging import warning
 
 from pexpect import EOF
 
-from topology_docker.shell import DockerShell
+from topology_docker.shell import DockerBashShell
 
 
-class OpenSwitchVtyshShell(DockerShell):
+class OpenSwitchVtyshShell(DockerBashShell):
     """
     OpenSwitch vtysh shell
 
     :param str container_id: identifier of the container that holds this shell
     """
 
-    def __init__(self, container_id):
-        super(OpenSwitchVtyshShell, self).__init__(
-            container_id, 'vtysh', '(^|\n)switch(\([\-a-zA-Z0-9]*\))?#'
-        )
+    FORCED_PROMPT = 'X@~~==::VTYSH_PROMPT::==~~@X'
+
+    def _setup_shell(self, connection=None):
+        """
+        FIXME: Document this
+        """
+
+        super(OpenSwitchVtyshShell, self)._setup_shell(connection=connection)
+
+        spawn = self._get_connection(connection)
+
+        spawn.expect(DockerBashShell.FORCED_PROMPT)
+
+        # This disables the terminal echoing of commands, it also removes the
+        # echo inside the vtysh shell
+        spawn.sendline('stty -echo')
+
+        spawn.expect(DockerBashShell.FORCED_PROMPT)
+
+        spawn.sendline('vtysh')
+
+        prompt_tpl = '{}(\([\-a-zA-Z0-9]*\))?#'
+
+        spawn.expect(prompt_tpl.format('switch'))
+
+        spawn.sendline('set prompt {}'.format(self.FORCED_PROMPT))
+
+        self._prompt = prompt_tpl.format(self.FORCED_PROMPT)
 
     def _exit(self):
         """
@@ -47,7 +71,9 @@ class OpenSwitchVtyshShell(DockerShell):
         """
         try:
             self.send_command('end')
-            self.send_command('exit', matches=[EOF])
+            self.send_command(
+                'exit', matches=[EOF, DockerBashShell.FORCED_PROMPT]
+            )
         except Exception as error:
             warning(
                 'Exiting the shell failed with this error: {}'.format(

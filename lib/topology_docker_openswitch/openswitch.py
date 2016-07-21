@@ -251,14 +251,14 @@ class OpenSwitchNode(DockerNode):
             **kwargs
         )
 
+        initial_prompt = '(^|\n).*[#$] '
+
         # Add vtysh (default) shell
         self._shells['vtysh'] = OpenSwitchVtyshShell(
-            self.container_id
+            self.container_id, 'bash', initial_prompt=initial_prompt
         )
 
         # Add bash shells
-        initial_prompt = '(^|\n).*[#$] '
-
         self._shells['bash'] = DockerBashShell(
             self.container_id, 'bash',
             initial_prompt=initial_prompt
