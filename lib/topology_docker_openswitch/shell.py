@@ -27,6 +27,7 @@ from logging import warning
 from pexpect import EOF
 
 from topology_docker.shell import DockerBashShell
+from re import match, search
 
 
 class OpenSwitchVtyshShell(DockerBashShell):
@@ -55,7 +56,7 @@ class OpenSwitchVtyshShell(DockerBashShell):
 
         spawn.expect(DockerBashShell.FORCED_PROMPT)
 
-        spawn.sendline('vtysh')
+        spawn.sendline('stdbuf -oL vtysh')
 
         prompt_tpl = '{}(\([\-a-zA-Z0-9]*\))?#'
 
@@ -63,7 +64,37 @@ class OpenSwitchVtyshShell(DockerBashShell):
 
         spawn.sendline('set prompt {}'.format(self.FORCED_PROMPT))
 
-        self._prompt = prompt_tpl.format(self.FORCED_PROMPT)
+        self._prompt = '{}|{}'.format(
+            prompt_tpl.format(self.FORCED_PROMPT),
+            DockerBashShell.FORCED_PROMPT
+        )
+
+    def send_command(
+        self, command, matches=None, newline=True, timeout=None,
+        connection=None
+    ):
+        match_index = super(OpenSwitchVtyshShell, self).send_command(
+            command, matches=matches, newline=newline, timeout=timeout,
+            connection=connection
+        )
+
+        spawn = self._get_connection(connection)
+
+        segmentation_fault = search(
+            r'Segmentation fault', spawn.before.decode('utf-8')
+        )
+        forced_bash_prompt = match(
+            DockerBashShell.FORCED_PROMPT, spawn.after.decode('utf-8')
+        )
+
+        if segmentation_fault is not None and forced_bash_prompt is not None:
+            raise Exception(
+                'Segmentation fault received when executing {}.'.format(
+                    self._last_command
+                )
+            )
+
+        return match_index
 
     def _exit(self):
         """
