@@ -73,16 +73,25 @@ def create_interfaces():
     hwports = [str(p['name']) for p in ports_hwdesc['ports']]
 
     # Get list of already created ports
+    front_panel_exec = 'ip netns exec front_panel '
+
     not_in_swns = check_output(shsplit(
-        'ls /sys/class/net/'
+        ''.join([front_panel_exec, 'ls /sys/class/net/'])
     )).split()
     in_swns = check_output(shsplit(
         'ip netns exec swns ls /sys/class/net/'
     )).split()
 
-    create_cmd_tpl = 'ip tuntap add dev {hwport} mode tap'
-    netns_cmd_tpl = 'ip link set {hwport} netns swns'
-    rename_int = 'ip link set {portlbl} name {hwport}'
+
+    create_cmd_tpl = ''.join(
+        [front_panel_exec, 'ip tuntap add dev {hwport} mode tap']
+    )
+    netns_cmd_tpl = ''.join(
+        [front_panel_exec, 'ip link set {hwport} netns swns']
+    )
+    rename_int = ''.join(
+        [front_panel_exec, 'ip link set {portlbl} name {hwport}']
+    )
 
     # Save port mapping information
     mapping_ports = {}
