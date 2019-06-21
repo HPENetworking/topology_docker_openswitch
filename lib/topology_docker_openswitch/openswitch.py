@@ -30,7 +30,7 @@ from subprocess import check_call
 from topology_docker.node import DockerNode
 from topology_docker.shell import DockerBashShell
 
-from .shell import OpenSwitchVtyshShell
+from .shell import (OpenSwitchVtyshShell, OpenSwitchValgrindShell)
 
 
 SETUP_SCRIPT = """\
@@ -253,6 +253,9 @@ class OpenSwitchNode(DockerNode):
 
         # Add vtysh (default) shell
         self._shells['vtysh'] = OpenSwitchVtyshShell(
+            self.container_id
+        )
+        self._shells['valgrind'] = OpenSwitchValgrind(
             self.container_id
         )
 
