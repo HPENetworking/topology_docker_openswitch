@@ -56,4 +56,31 @@ class OpenSwitchVtyshShell(DockerShell):
             )
 
 
-__all__ = ['OpenSwitchVtyshShell']
+class OpenSwitchValgrindShell(DockerShell):
+    """
+    OpenSwitch valgrind shell
+
+    :param str container_id: identifier of the container that holds this shell
+    """
+
+    def __init__(self, container_id):
+        super(OpenSwitchValgrindShell, self).__init__(
+            container_id, 'valgrind', '(^|\n)switch(\([\-a-zA-Z0-9]*\))?#'
+        )
+
+    def _exit(self):
+        """
+        Attempt a clean exit from the shell.
+        """
+        try:
+            self.send_command('end')
+            self.send_command('exit', matches=[EOF])
+        except Exception as error:
+            warning(
+                'Exiting the shell failed with this error: {}'.format(
+                    str(error)
+                )
+            )
+
+
+__all__ = ['OpenSwitchVtyshShell', 'OpenSwitchValgrindShell']
